@@ -1,0 +1,10 @@
+# Auto detect text files and perform LF normalization
+*        text=auto
+
+*.java   text diff=java     eol=lf
+*.md     text diff=markdown eol=lf
+
+*.sh     text eol=lf
+
+*.bat    text eol=crlf
+*.cmd    text eol=crlf

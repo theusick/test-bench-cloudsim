@@ -1,0 +1,27 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.mas</groupId>
+    <artifactId>test-bench</artifactId>
+    <version>${revision}</version>
+
+    <packaging>pom</packaging>
+
+    <properties>
+        <revision>0.0.1</revision>
+
+        <mvn.version>3.9.6</mvn.version>
+
+        <jdk.version>21</jdk.version>
+        <maven.compiler.source>${jdk.version}</maven.compiler.source>
+        <maven.compiler.target>${jdk.version}</maven.compiler.target>
+    </properties>
+
+    <modules>
+        <module>dependencies</module>
+        <module>modules</module>
+    </modules>
+
+</project>
