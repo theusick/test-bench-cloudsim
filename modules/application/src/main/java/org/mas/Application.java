@@ -16,24 +16,13 @@ import org.cloudsimplus.utilizationmodels.UtilizationModelDynamic;
 import org.cloudsimplus.vms.Vm;
 import org.cloudsimplus.vms.VmSimple;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class Application {
-
-    private static final int HOSTS = 1;
-    private static final int HOST_PES = 8;
-    private static final int HOST_MIPS = 1000; // Milion Instructions per Second (MIPS)
-    private static final int HOST_RAM = 2048; //in Megabytes
-    private static final long HOST_BW = 10_000; //in Megabits/s
-    private static final long HOST_STORAGE = 1_000_000; //in Megabytes
-
-    private static final int VMS = 2;
-    private static final int VM_PES = 4;
-
-    private static final int CLOUDLETS = 4;
-    private static final int CLOUDLET_PES = 2;
-    private static final int CLOUDLET_LENGTH = 10_000; // Milion Instructions (MI)
 
     private final CloudSimPlus simulation;
     private final DatacenterBroker broker0;
@@ -41,22 +30,17 @@ public class Application {
     private List<Cloudlet> cloudletList;
     private Datacenter datacenter0;
 
-    /**
-     * BasicFirstExample from CloudSimPlus GitHub:
-     * https://github.com/cloudsimplus/cloudsimplus-examples/blob/master/src/main/java/org/cloudsimplus/examples/BasicFirstExample.java
-     */
+    private Properties config;
+
     public static void main(String[] args) {
         new Application();
     }
 
     private Application() {
-         /*Enables just some level of log messages.
-          Make sure to import org.cloudsimplus.util.Log;*/
-        //Log.setLevel(ch.qos.logback.classic.Level.WARN);
+        loadConfig();
 
         simulation = new CloudSimPlus();
         datacenter0 = createDatacenter();
-
         //Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs and Cloudlets
         broker0 = new DatacenterBrokerSimple(simulation);
 
@@ -72,46 +56,63 @@ public class Application {
     }
 
     /**
+     * Loading parameters from config file
+     */
+    private void loadConfig() {
+        config = new Properties();
+        try (FileInputStream input = new FileInputStream("config.properties")) {
+            config.load(input);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Creates a Datacenter and its Hosts.
      */
     private Datacenter createDatacenter() {
-        final var hostList = new ArrayList<Host>(HOSTS);
-        for (int i = 0; i < HOSTS; i++) {
+        int hosts = Integer.parseInt(config.getProperty("hosts"));
+        final var hostList = new ArrayList<Host>(hosts);
+        for (int i = 0; i < hosts; i++) {
             final var host = createHost();
             hostList.add(host);
         }
-
-        //Uses a VmAllocationPolicySimple by default to allocate VMs
         return new DatacenterSimple(simulation, hostList);
     }
 
     private Host createHost() {
-        final var peList = new ArrayList<Pe>(HOST_PES);
+        int hostPes = Integer.parseInt(config.getProperty("host.pes"));
+        int hostMips = Integer.parseInt(config.getProperty("host.mips"));
+        int hostRam = Integer.parseInt(config.getProperty("host.ram"));
+        long hostBw = Long.parseLong(config.getProperty("host.bw"));
+        long hostStorage = Long.parseLong(config.getProperty("host.storage"));
+
+        final var peList = new ArrayList<Pe>(hostPes);
         //List of Host's CPUs (Processing Elements, PEs)
-        for (int i = 0; i < HOST_PES; i++) {
+        for (int i = 0; i < hostPes; i++) {
             //Uses a PeProvisionerSimple by default to provision PEs for VMs
-            peList.add(new PeSimple(HOST_MIPS));
+            peList.add(new PeSimple(hostMips));
         }
 
-        /*
-        Uses ResourceProvisionerSimple by default for RAM and BW provisioning
-        and VmSchedulerSpaceShared for VM scheduling.
-        */
-        return new HostSimple(HOST_RAM, HOST_BW, HOST_STORAGE, peList);
+        return new HostSimple(hostRam, hostBw, hostStorage, peList);
     }
 
     /**
      * Creates a list of VMs.
      */
     private List<Vm> createVms() {
-        final var vmList = new ArrayList<Vm>(VMS);
-        for (int i = 0; i < VMS; i++) {
-            //Uses a CloudletSchedulerTimeShared by default to schedule Cloudlets
-            final var vm = new VmSimple(HOST_MIPS, VM_PES);
-            vm.setRam(512).setBw(1000).setSize(10_000);
+        int vms = Integer.parseInt(config.getProperty("vms"));
+        int vmPes = Integer.parseInt(config.getProperty("vm.pes"));
+        int vmRam = Integer.parseInt(config.getProperty("vm.ram"));
+        int vmBw = Integer.parseInt(config.getProperty("vm.bw"));
+        int vmSize = Integer.parseInt(config.getProperty("vm.size"));
+
+        final var vmList = new ArrayList<Vm>(vms);
+        for (int i = 0; i < vms; i++) {
+            final var vm = new VmSimple(vmRam, vmPes);
+            vm.setRam(vmRam).setBw(vmBw).setSize(vmSize);
             vmList.add(vm);
         }
-
         return vmList;
     }
 
@@ -119,18 +120,20 @@ public class Application {
      * Creates a list of Cloudlets.
      */
     private List<Cloudlet> createCloudlets() {
-        final var cloudletList = new ArrayList<Cloudlet>(CLOUDLETS);
+        int cloudlets = Integer.parseInt(config.getProperty("cloudlets"));
+        int cloudletPes = Integer.parseInt(config.getProperty("cloudlet.pes"));
+        int cloudletLength = Integer.parseInt(config.getProperty("cloudlet.length"));
+        int cloudletSize = Integer.parseInt(config.getProperty("cloudlet.size"));
+        double utilization = Double.parseDouble(config.getProperty("utilization"));
 
-        //UtilizationModel defining the Cloudlets use only 50% of any resource all the time
-        final var utilizationModel = new UtilizationModelDynamic(0.5);
+        final var cloudletList = new ArrayList<Cloudlet>(cloudlets);
+        final var utilizationModel = new UtilizationModelDynamic(utilization);
 
-        for (int i = 0; i < CLOUDLETS; i++) {
-            final var cloudlet = new CloudletSimple(CLOUDLET_LENGTH, CLOUDLET_PES, utilizationModel);
-            cloudlet.setSizes(1024);
+        for (int i = 0; i < cloudlets; i++) {
+            final var cloudlet = new CloudletSimple(cloudletLength, cloudletPes, utilizationModel);
+            cloudlet.setSizes(cloudletSize);
             cloudletList.add(cloudlet);
         }
-
         return cloudletList;
     }
-
 }
